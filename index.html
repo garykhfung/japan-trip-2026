@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Japan Trip 2026 | Fujiyoshida & Tokyo</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root { --jp-red: #bc002d; --dark: #2d2d2d; --light: #f4f4f4; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--light); color: var(--dark); }
+        header { background: var(--jp-red); color: white; padding: 2rem; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .container { max-width: 1000px; margin: 2rem auto; padding: 0 1rem; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+        .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 2rem; }
+        #map { height: 400px; border-radius: 8px; border: 2px solid var(--jp-red); }
+        h2 { border-bottom: 2px solid var(--jp-red); padding-bottom: 0.5rem; color: var(--jp-red); }
+        .weather-box { display: flex; justify-content: space-between; text-align: center; }
+        .day-pill { background: #eee; padding: 0.5rem; border-radius: 4px; font-size: 0.9rem; }
+        #itinerary-content { white-space: pre-line; line-height: 1.6; }
+        .transport-tag { background: #e0f2f1; color: #00695c; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Japan Adventure 2026</h1>
+    <p>May 17 — May 24</p>
+</header>
+
+<div class="container">
+    <div class="grid">
+        <!-- MAP SECTION -->
+        <div class="card">
+            <h2>Explore the Route</h2>
+            <div id="map"></div>
+        </div>
+
+        <!-- WEATHER & TRANSPORT -->
+        <div>
+            <div class="card">
+                <h2>Weather Forecast</h2>
+                <div class="weather-box">
+                    <div><strong>Fujiyoshida</strong><br>25°C / 9°C<br>☀️ Sunny/Rain</div>
+                    <div><strong>Tokyo</strong><br>31°C / 19°C<br>☀️ Very Warm</div>
+                </div>
+                <p style="font-size: 0.8rem; margin-top: 10px; color: #666;">*Based on late May averages/forecasts.</p>
+            </div>
+
+            <div class="card">
+                <h2>Transportation</h2>
+                <p><strong>To Fujiyoshida:</strong> Highway Bus from Tokyo Sta. or the <em>Fuji Excursion</em> Limited Express from Shinjuku.</p>
+                <p><strong>In Tokyo:</strong> Use a <span class="transport-tag">Suica</span> or <span class="transport-tag">Pasmo</span> card for JR Yamanote and Subways.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ITINERARY SECTION -->
+    <div class="card">
+        <h2>Itinerary <span style="font-size: 0.9rem; font-weight: normal; color: #666;">(Edit itinerary.txt to update)</span></h2>
+        <div id="itinerary-content">Loading your plans...</div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // Initialize Map
+    const map = L.map('map').setView([35.59, 139.3], 9);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    L.marker([35.484, 138.805]).addTo(map).bindPopup('<b>Fujiyoshida</b><br>Days 1-4').openPopup();
+    L.marker([35.689, 139.692]).addTo(map).bindPopup('<b>Tokyo City Center</b><br>Days 5-8');
+
+    // Fetch Itinerary from text file
+    fetch('itinerary.txt')
+        .then(response => response.text())
+        .then(data => {
+            document.getElementById('itinerary-content').innerText = data;
+        })
+        .catch(err => {
+            document.getElementById('itinerary-content').innerText = "Create a file named 'itinerary.txt' in this folder to display your plans!";
+        });
+</script>
+
+</body>
+</html>
