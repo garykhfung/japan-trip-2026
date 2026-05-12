@@ -3,93 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Japan Trip 2026 | Smart Map</title>
+    <title>Japan Trip 2026 | Dynamic Planner</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --jp-red: #bc002d; --dark: #2d2d2d; --light: #f4f4f4; }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--light); color: var(--dark); }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--light); color: var(--dark); line-height: 1.6; }
         header { background: var(--jp-red); color: white; padding: 1.5rem; text-align: center; }
         .container { max-width: 1000px; margin: 1rem auto; padding: 0 1rem; }
-        .card { background: white; padding: 1.2rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 1rem; }
-        #map { height: 350px; border-radius: 8px; border: 2px solid var(--jp-red); transition: all 0.5s ease; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+        .card { background: white; padding: 1.2rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        #map { height: 350px; border-radius: 8px; border: 2px solid var(--jp-red); }
         h2 { border-bottom: 2px solid var(--jp-red); padding-bottom: 0.5rem; color: var(--jp-red); margin-top: 0; font-size: 1.2rem; }
-        .status-bar { background: #333; color: #fff; padding: 5px 15px; font-size: 0.8rem; border-radius: 20px; display: inline-block; margin-bottom: 10px; }
-        #itinerary-content { white-space: pre-line; line-height: 1.6; border-left: 3px solid #eee; padding-left: 15px; }
+        .weather-active { text-align: center; background: #fff5f5; border-radius: 8px; padding: 1rem; border: 1px solid #ffcccc; }
+        .temp-large { font-size: 2.5rem; font-weight: bold; color: var(--jp-red); margin: 5px 0; }
+        #itinerary-content { white-space: pre-line; background: #fff; padding: 1rem; border-radius: 8px; }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>Japan Adventure 2026</h1>
+    <h1>Japan Trip 2026</h1>
+    <div id="date-display">Today: May 12, 2026</div>
 </header>
 
 <div class="container">
-    <div class="status-bar" id="trip-status">Checking your schedule...</div>
-    
-    <div class="card">
-        <h2 id="location-title">Current Destination</h2>
-        <div id="map"></div>
+    <div class="grid">
+        <!-- MAP SECTION -->
+        <div class="card">
+            <h2 id="location-title">Loading Location...</h2>
+            <div id="map"></div>
+        </div>
+
+        <!-- WEATHER SECTION -->
+        <div class="card">
+            <h2>Local Weather</h2>
+            <div id="weather-container" class="weather-active">
+                <p>Syncing weather with your location...</p>
+            </div>
+            <p style="font-size: 0.8rem; margin-top: 10px; color: #666;">
+                <strong>Transport Tip:</strong> <span id="transport-tip">Loading tips...</span>
+            </p>
+        </div>
     </div>
 
+    <!-- ITINERARY SECTION -->
     <div class="card">
-        <h2>Itinerary <span style="font-size: 0.7rem; color: #888;">(Detects 'Tokyo: May [Date]')</span></h2>
-        <div id="itinerary-content">Loading...</div>
+        <h2>Trip Itinerary <span style="font-size: 0.7rem; color: #888;">(Updates from itinerary.txt)</span></h2>
+        <div id="itinerary-content">Loading your plans...</div>
     </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // Coordinates
     const LOCS = {
-        fuji: { coords: [35.484, 138.805], name: "Fujiyoshida (Mt. Fuji)" },
-        tokyo: { coords: [35.689, 139.692], name: "Tokyo City Center" }
+        fuji: { 
+            coords: [35.484, 138.805], 
+            name: "Fujiyoshida", 
+            tip: "Use the 'Town Sneaker' bus for Chureito Pagoda." 
+        },
+        tokyo: { 
+            coords: [35.689, 139.692], 
+            name: "Tokyo Center", 
+            tip: "Use the Yamanote Line (JR) for major districts." 
+        }
     };
 
-    // Initialize Map at a neutral zoom first
-    const map = L.map('map').setView(LOCS.fuji.coords, 13);
+    const map = L.map('map').setView(LOCS.fuji.coords, 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     const marker = L.marker(LOCS.fuji.coords).addTo(map);
 
-    // Main logic to sync text with map
-    async function syncTrip() {
+    async function fetchWeather(lat, lon) {
+        try {
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=auto`);
+            const data = await res.json();
+            const current = data.current_weather;
+            const daily = data.daily;
+
+            document.getElementById('weather-container').innerHTML = `
+                <div style="font-weight: bold; font-size: 1.1rem;">Currently</div>
+                <div class="temp-large">${Math.round(current.temperature)}°C</div>
+                <div>Range: ${Math.round(daily.temperature_2m_min[0])}°C to ${Math.round(daily.temperature_2m_max[0])}°C</div>
+            `;
+        } catch (e) {
+            document.getElementById('weather-container').innerText = "Weather update failed.";
+        }
+    }
+
+    async function syncAll() {
         try {
             const response = await fetch('itinerary.txt');
             const text = await response.text();
             document.getElementById('itinerary-content').innerText = text;
 
-            // PARSING LOGIC: Look for "Tokyo: May XX"
+            // Find Move Date (e.g., Tokyo: May 21)
             const match = text.match(/Tokyo:\s*May\s*(\d+)/i);
-            const moveDay = match ? parseInt(match[1]) : 21; // Default to 21 if not found
+            const moveDay = match ? parseInt(match[1]) : 21;
 
-            // Determine current simulated date for 2026
-            // Note: Since we are in 2024/25, we check current day/month
-            const now = new Date();
-            const currentMonth = now.getMonth() + 1; // 1-12
-            const currentDay = now.getDate();
-            
-            let destination = LOCS.fuji;
-            let statusPrefix = "Currently in: ";
+            // Check current "Simulated" date (May 12, 2026)
+            const today = 12; 
+            const activeLoc = (today >= moveDay) ? LOCS.tokyo : LOCS.fuji;
 
-            // Logic: If it is May and today's date >= moveDay, go to Tokyo
-            // (Or if it's after May)
-            if (currentMonth > 5 || (currentMonth === 5 && currentDay >= moveDay)) {
-                destination = LOCS.tokyo;
-            }
+            // Update Map & Title
+            document.getElementById('location-title').innerText = `Destination: ${activeLoc.name}`;
+            document.getElementById('transport-tip').innerText = activeLoc.tip;
+            map.flyTo(activeLoc.coords, 12);
+            marker.setLatLng(activeLoc.coords).bindPopup(activeLoc.name).openPopup();
 
-            // Update UI
-            document.getElementById('location-title').innerText = destination.name;
-            document.getElementById('trip-status').innerText = `Schedule Sync: Move to Tokyo set for May ${moveDay}`;
-            
-            // Move Map
-            map.flyTo(destination.coords, 13, { duration: 2 });
-            marker.setLatLng(destination.coords).bindPopup(destination.name).openPopup();
+            // Update Weather for that specific location
+            fetchWeather(activeLoc.coords[0], activeLoc.coords[1]);
 
         } catch (err) {
-            document.getElementById('itinerary-content').innerText = "Error loading itinerary.txt";
+            console.error("Sync error:", err);
         }
     }
 
-    syncTrip();
+    syncAll();
 </script>
 </body>
 </html>
